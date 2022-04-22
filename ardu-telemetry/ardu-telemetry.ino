@@ -1,26 +1,29 @@
 #include <Wire.h>
 
+#define d2r (3.141592 / 180.0)
+
+float calc_dist(float lat1, float long1, float lat2, float long2);
+void set1(void);
+void set2(void);
+void onRequest(void);
+
 struct STREAM_DATA {
-  uint16_t battVoltage = 13200; //millivolt
-  float altitude = 3145; //ertefa
-  float climb = 23.4; // rise speed
-  float roll = -1.4;
-  float pitch = -11.3;
-  float yaw = 305.6;
-  uint8_t gps_sats = 12;
-  float gps_lon = 52.619566;
-  float gps_lat = 34.379513;
-  float home_lon = 52.619766;
-  float home_lat = 34.379713;
-  uint16_t gps_speed = 87;
-  boolean gps_fix = true;
-  uint32_t home_distance = 0;
+  uint16_t battVoltage = 13200; // in millivolts
+  float altitude = 1401;        // GPS altitude
+  float climb = 1.4;            // rise speed
+  float roll = 2.4;             // roll degree
+  float pitch = -11.3;          // pitch degree
+  float yaw = 15.6;             // Yaw degree
+  uint8_t gps_sats = 12;        // number of GPS satellites
+  float gps_lon = 51.405274;    // GPS longitude
+  float gps_lat = 35.701239;    // GPS latitude
+  float home_lon = 51.447338;   // base longitude
+  float home_lat = 35.689688;   // base latitude
+  uint16_t gps_speed = 87;      // GPS linear speed
 };
 
 STREAM_DATA streamData;
-
 boolean set = false;
-
 
 void setup() {
   Serial.begin(9600);
@@ -28,29 +31,24 @@ void setup() {
   Wire.begin(4);
   Wire.onRequest(onRequest);
 
-  Serial.println("Starting up...");
-
+  Serial.println("Started up");
 }
 
 void loop() {
-
+ /* NOTHING */
 }
 
-#define d2r (M_PI / 180.0)
 float calc_dist(float lat1, float long1, float lat2, float long2) {
   double dlong = (long2 - long1) * d2r;
   double dlat = (lat2 - lat1) * d2r;
   double a = pow(sin(dlat / 2.0), 2) + cos(lat1 * d2r) * cos(lat2 * d2r) * pow(sin(dlong / 2.0), 2);
   double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  float d = 6367 * c * 1000; // in meters
-  if (d >= 0) {
-    return d;
-  } else {
-    return -d;
-  }
+  float d = 6372.2 * c * 1000; // in meters
+  
+  return d = (d>=0) ? d : -d;
 }
 
-void set1() {
+void set1(void) {
 
   int  alt = streamData.altitude * 10;
   byte  altHi = highByte(alt )  ;
@@ -82,7 +80,7 @@ void set1() {
   byte buffer[16] = {0x89, 0xAB, streamData.gps_sats, altHi, altLo, yawHi, yawLo, speedHi, speedLo, rollHi , rollLo, pitchHi, pitchLo, distanceHi, distanceLo, 0x00};
   Wire.write(buffer, 16);
 }
-void set2() {
+void set2(void) {
 
   int  rise = streamData.climb * 10;
   byte  riseHi = highByte(rise);
@@ -91,29 +89,27 @@ void set2() {
   byte voltesHi = highByte(streamData.battVoltage);
   byte voltesLo = lowByte(streamData.battVoltage);
 
-  int32_t latt = 1e7*streamData.gps_lat;
-  byte latHHi = byte((latt >> 24) & 0x000000FF);
-  byte latHi  = byte((latt >> 16) & 0x000000FF);
-  byte latLo  = byte((latt >> 8)  & 0x000000FF);
-  byte latLLi = byte((latt >> 0)  & 0x000000FF);
+  int32_t lat = 1e7*streamData.gps_lat;
+  byte latHHi = byte((lat >> 24) & 0x000000FF);
+  byte latHi  = byte((lat >> 16) & 0x000000FF);
+  byte latLo  = byte((lat >> 8)  & 0x000000FF);
+  byte latLLi = byte((lat >> 0)  & 0x000000FF);
 
-  int32_t longg = 1e7*streamData.gps_lon;
-  byte logHHi = byte((longg >> 24) & 0x000000FF);
-  byte logHi  = byte((longg >> 16) & 0x000000FF);
-  byte logLo  = byte((longg >> 8)  & 0x000000FF);
-  byte logLLi = byte((longg >> 0)  & 0x000000FF);
+  int32_t lon = 1e7*streamData.gps_lon;
+  byte lonHHi = byte((lon >> 24) & 0x000000FF);
+  byte lonHi  = byte((lon >> 16) & 0x000000FF);
+  byte lonLo  = byte((lon >> 8)  & 0x000000FF);
+  byte lonLLi = byte((lon >> 0)  & 0x000000FF);
 
-  byte buffer[16] = {0x89, 0xCD, streamData.gps_sats, riseHi, riseLo, voltesHi, voltesLo, latHHi, latHi, latLo , latLLi, logHHi, logHi, logLo , logLLi, 0x00};
+  byte buffer[16] = {0x89, 0xCD, streamData.gps_sats, riseHi, riseLo, voltesHi, voltesLo, latHHi, latHi, latLo , latLLi, lonHHi, lonHi, lonLo , lonLLi, 0x00};
   Wire.write(buffer, 16);
 }
 
 
-void onRequest() {
-  if (set) {
-    set = false;
+void onRequest(void) {
+  if (set)
     set1();
-  } else {
-    set = true;
+  else
     set2();
-  }
+  set = !set;
 }
