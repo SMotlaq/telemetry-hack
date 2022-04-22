@@ -1,4 +1,4 @@
-# RadioLink R9DS telemtry hack
+# RadioLink R9DS telemetry hack
 
 Docs will be added asap.
 
