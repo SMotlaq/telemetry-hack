@@ -1,1 +1,0 @@
-# Docs about arduino version
